@@ -1,0 +1,56 @@
+#!/bin/bash
+PROGUARD=false
+SBK_VERSION=""
+
+while getopts "p:v:" opt #选项后面的冒号表示该选项需要参数
+do
+    case $opt in
+        p)
+            if [ "$OPTARG" == "true" ]; 
+            then
+                PROGUARD=true
+            elif [ "$OPTARG" == "false" ]; then
+                PROGUARD=false
+            else
+                echo "混淆参数无效"
+                exit 1
+            fi
+            ;;
+        v)
+            SBK_VERSION=$OPTARG
+            ;;        
+        ?)  #当有不认识的选项的时候arg为?
+            echo "无效参数"
+            exit 1
+        ;;
+    esac
+done
+
+# 开始编译
+gradle clean
+gradle build
+
+# 根据参数判断是否混淆代码生成 jar
+JAR="sensoro-scanner-$SBK_VERSION.jar"
+
+renameJar() {
+    echo "重命名 jar"
+    # 进入 ~/Desktop
+    cd ~/Desktop
+    # 解压混淆后 classes.jar
+    unzip classes.jar
+    # 压缩为 sensoro-scanner.zip 文件
+    zip -q -x "*/\.*" -x "\.*" -r -m -o sensoro-scanner.zip com
+    # 重名为相应版本 jar
+    mv sensoro-scanner.zip $JAR
+}
+
+if [ "$PROGUARD" == true ]; then
+    echo "混淆jar"
+    cp build/intermediates/bundles/release/classes.jar ~/Desktop/
+    renameJar
+elif [ "$PROGUARD" == false ]; then
+    echo "不混淆 jar"
+    cp build/intermediates/bundles/debug/classes.jar ~/Desktop/
+    renameJar
+fi
